@@ -1,0 +1,6 @@
+*.cache
+/build
+/config.h.in
+/configure
+/configure.ac
+/run-tests.php
