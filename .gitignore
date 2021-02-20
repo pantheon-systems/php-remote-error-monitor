@@ -4,3 +4,17 @@
 /configure
 /configure.ac
 /run-tests.php
+/.idea
+/cmake-build-debug/
+/CMakeLists.txt
+/config.nice
+/config.log
+/.libs
+/config.status
+/Makefile
+/Makefile.fragments
+/Makefile.objects
+/modules
+/libtool
+/webops_event.la
+/webops_event.lo
