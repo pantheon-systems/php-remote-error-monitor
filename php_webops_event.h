@@ -13,7 +13,7 @@
      * PHP Source Tree
      */
     #ifdef HAVE_CONFIG_H
-    #include "config.h"
+      #include "config.h"
     #endif
 
   /* Import standard PHP Header.
