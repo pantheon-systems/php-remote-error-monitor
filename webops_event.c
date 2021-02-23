@@ -1,18 +1,20 @@
-#include "php_webops_event.h"
+#include "zend_types.h"
+#include "zend_API.h"
+#include "../php_webops_event.h"
+#include "hooks/webops_event_ginit.h"
+#include "hooks/webops_event_minit.h"
+#include "hooks/webops_event_rinit.h"
+#include "hooks/webops_event_gshutdown.h"
+#include "hooks/webops_event_mshutdown.h"
+#include "hooks/webops_event_rshutdown.h"
 
-zend_module_entry webops_event_module_entry = {
-   STANDARD_MODULE_HEADER,
-   PHP_WEBOPS_EVENT_EXTNAME,
-   NULL, /* Functions */
-   NULL, /* MINIT */
-   NULL, /* MSHUTDOWN */
-   NULL, /* RINIT */
-   NULL, /* RSHUTDOWN */
-   NULL, /* MINFO */
-   PHP_WEBOPS_EVENT_EXTVER,
-   STANDARD_MODULE_PROPERTIES
-};
+/**
+ * DATA STRUCTURES
+ *
+ *
+ * Data structures used by all hooks.
+ */
 
-#ifdef COMPILE_DL_WEBOPS_EVENT
-  ZEND_GET_MODULE(webops_event)
-#endif
+
+
+
