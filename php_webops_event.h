@@ -1,9 +1,13 @@
 #include "php.h"
+#include "php_ini.h"
+#include "ext/standard/info.h"
 #include "zend_errors.h"
+#include "zend_modules.h"
 #include "zend_smart_str.h"
-#include "webops_event.h"
 #include "zend_types.h"
 #include "zend_API.h"
+#include "zend_exceptions.h"
+#include "zend_interfaces.h"
 
 #ifndef E_EXCEPTION
   #define E_EXCEPTION (1<<15L)
@@ -16,8 +20,8 @@
   /* Extension Properties
    *
    */
-  #define PHP_WEBOPS_EVENT_EXTNAME "webops_event"
-  #define PHP_WEBOPS_EVENT_EXTVER "1.0"
+  #define WEBOPS_EVENT_EXTNAME "webops_event"
+  #define WEBOPS_EVENT_EXTVER "1.0"
 
     /* Import Configure Options
      * when building outside of
@@ -36,8 +40,8 @@
    *
    */
 
-  #define phpext_webops_event_ptr &webops_event_entry
-  extern zend_module_entry webops_event_entry;
+  #define phpext_webops_event_ptr &webops_event_module_entry
+  extern zend_module_entry webops_event_module_entry;
 
   #ifdef PHP_WIN32
     #define PHP_WEBOPS_EVENT_API __declspec(dllexport)
@@ -50,56 +54,31 @@
   #define WEBOPS_EVENT_ERROR 1
   #define WEBOPS_EVENT_EXCEPTION 2
 
-  #define PROCESS_EVENT_ARGS int type, char * error_filename, uint64_t error_lineno, char * msg, char * trace
-
-
 #endif
 
 
-typedef struct webops_event {
-    int event_type;
-    int type;
-    char * error_filename;
-    uint64_t error_lineno;
-    char * msg;
-    char * trace;
-} webops_event;
+#include "webops_event.h"
+#include "hooks/webops_event_ginit.h"
+#include "hooks/webops_event_minit.h"
+#include "hooks/webops_event_rinit.h"
+#include "hooks/webops_event_minfo.h"
+#include "hooks/webops_event_gshutdown.h"
+#include "hooks/webops_event_mshutdown.h"
+#include "hooks/webops_event_rshutdown.h"
 
-typedef struct webops_event_entry {
-    webops_event event;
-    struct webops_event_entry *next;
+zend_module_entry webops_event_module_entry = {
+    STANDARD_MODULE_HEADER,
+    WEBOPS_EVENT_EXTNAME,
+    NULL,
+    WEBOPS_EVENT_MINIT_FUNCTION(webops_event),
+    WEBOPS_EVENT_MSHUTDOWN_FUNCTION(webops_event),
+    WEBOPS_EVENT_RINIT_FUNCTION(webops_event),
+    WEBOPS_EVENT_RSHUTDOWN_FUNCTION(webops_event),
+    WEBOPS_EVENT_MINFO_FUNCTION(webops_event),
+    WEBOPS_EVENT_EXTVER,
+    PHP_MODULE_GLOBALS(webops_event),
+    WEBOPS_EVENT_GINIT_FUNCTION(webops_event),
+    WEBOPS_EVENT_GSHUTDOWN_FUNCTION(webops_event),
+    NULL,
+    STANDARD_MODULE_PROPERTIES_EX
 };
-
-typedef struct webops_event_driver {
-    void (* process_event)(PROCESS_EVENT_ARGS);
-    void (* process_stats)();
-    int (* ZEND_MINIT)(int );
-    int (* ZEND_RINIT)();
-    int (* ZEND_MSHUTDOWN)(SHUTDOWN_FUNC_ARGS);
-    int (* ZEND_RSHUTDOWN)();
-    int (*is_enabled)();
-    int (*want_event)(int, int, char * );
-    int (*want_stats)();
-    int (* error_reporting)();
-    int is_request_created;
-} webops_event_driver;
-
-typedef struct webops_event_driver_entry {
-    webops_event_driver driver;
-    struct webops_event_driver_entry *next;
-} webops_event_driver_entry;
-
-# define RD_DEF(var) zval *var; zend_bool var##_found;
-
-typedef struct {
-    RD_DEF(uri);
-    RD_DEF(host);
-    RD_DEF(ip);
-    RD_DEF(referer);
-    RD_DEF(ts);
-    RD_DEF(script);
-    RD_DEF(method);
-
-    zend_bool initialized, cookies_found, post_vars_found;
-    smart_str cookies, post_vars;
-} webops_event_request_data;
