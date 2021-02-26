@@ -1,63 +1,65 @@
-#include "zend_types.h"
-#include "zend_API.h"
-#include "zend_modules.h"
+#include "zend_extensions.h"
+#include "php_webops_event.h"
+#include "Zend/zend_smart_str.h"
 
-/**
- * DATA STRUCTURES
- *
- *
- * Data structures used by all hooks.
- */
+#include "webops_event.h"
 
-#define PROCESS_EVENT_ARGS int type, char * error_filename, uint64_t error_lineno, char * msg, char * trace
-#define RD_DEF(var) zval *var; zend_bool var##_found;
+#define PRINT(what) fprintf(stderr, what "\n");
 
 
+static int webops_event_zend_extension_startup(zend_extension *ext) {
+  PRINT("WEBOPS_EVENT zend hook startup!");
+  return SUCCESS;
+}
 
-typedef struct webops_event {
-    int event_type;
-    int type;
-    char * error_filename;
-    uint64_t error_lineno;
-    char * msg;
-    char * trace;
-} webops_event;
-
-typedef struct webops_event_entry {
-    webops_event event;
-    struct webops_event_entry *next;
-} webops_event_entry;
-
-typedef struct webops_event_driver {
-    void (* process_event)(PROCESS_EVENT_ARGS);
-    void (* process_stats)();
-    int (* ZEND_MINIT)(int );
-    int (* ZEND_RINIT)();
-    int (* ZEND_MSHUTDOWN)(SHUTDOWN_FUNC_ARGS);
-    int (* ZEND_RSHUTDOWN)();
-    int (*is_enabled)();
-    int (*want_event)(int, int, char * );
-    int (*want_stats)();
-    int (* error_reporting)();
-    int is_request_created;
-} webops_event_driver;
-
-typedef struct webops_event_driver_entry {
-    webops_event_driver driver;
-    struct webops_event_driver_entry *next;
-} webops_event_driver_entry;
+static void webops_event_zend_extension_shutdown(zend_extension *ext) {
+  PRINT("WEBOPS_EVENT zend hook shutdown!");
+}
 
 
-typedef struct webops_event_request_data {
-    RD_DEF(uri);
-    RD_DEF(host);
-    RD_DEF(ip);
-    RD_DEF(referer);
-    RD_DEF(ts);
-    RD_DEF(script);
-    RD_DEF(method);
+static void webops_event_zend_extension_activate(void) {
+  PRINT("WEBOPS_EVENT zend hook activate!");
+}
 
-    zend_bool initialized, cookies_found, post_vars_found;
-    smart_str cookies, post_vars;
-} webops_event_request_data;
+static void webops_event_zend_extension_deactivate(void) {
+  PRINT("WEBOPS_EVENT zend hook deactivate!");
+}
 
+static void webops_event_zend_extension_message_handler(int code, void *ext) { }
+
+static void webops_event_zend_extension_op_array_handler(zend_op_array *op_array) { }
+
+static void webops_event_zend_extension_fcall_begin_handler(zend_execute_data *ex) { }
+
+
+
+zend_extension_version_info extension_version_info = {
+    ZEND_EXTENSION_API_NO,
+    ZEND_EXTENSION_BUILD_ID
+};
+
+zend_extension zend_extension_entry = {
+    WEBOPS_EVENT_EXTNAME,
+    WEBOPS_EVENT_EXTVER,
+    "Pantheon",
+    "https://pantheon.io",
+    "&copy; 2021 All Rights Reserved",
+    webops_event_zend_extension_startup,      /* startup() : module startup */
+    webops_event_zend_extension_shutdown,   /* shutdown() : module shutdown */
+    webops_event_zend_extension_activate,            /* activate() : request startup */
+    webops_event_zend_extension_deactivate,          /* deactivate() : request shutdown */
+    webops_event_zend_extension_message_handler,     /* message_handler() */
+
+    webops_event_zend_extension_op_array_handler,    /* compiler op_array_handler() */
+    NULL,                                            /* VM statement_handler() */
+    NULL,                                            /* VM fcall_begin_handler() */
+    webops_event_zend_extension_fcall_begin_handler, /* VM fcall_end_handler() */
+    NULL,                                            /* compiler op_array_ctor() */
+    NULL,                                            /* compiler op_array_dtor() */
+    STANDARD_ZEND_EXTENSION_PROPERTIES               /* Structure-ending macro */
+};
+
+
+#ifdef COMPILE_DL_SAMPLE
+ZEND_GET_MODULE(webops_event)
+#endif

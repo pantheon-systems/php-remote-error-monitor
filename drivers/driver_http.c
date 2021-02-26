@@ -18,14 +18,15 @@
 
 #include <stdio.h>
 #include <curl/curl.h>
-#include "php_apm.h"
 #include "php_ini.h"
+#include "../php_webops_event.h"
+#include "../webops_event.h"
 
 #include "driver_http.h"
 
-ZEND_EXTERN_MODULE_GLOBALS(apm)
+ZEND_EXTERN_MODULE_GLOBALS(webops_event);
 
-APM_DRIVER_CREATE(http)
+WEBOPS_EVENT_DRIVER_CREATE(http)
 
 char *truncate_data(char *input_str, size_t max_len)
 {
@@ -38,7 +39,7 @@ char *truncate_data(char *input_str, size_t max_len)
 }
 
 /* Insert an event in the backend */
-void apm_driver_http_process_event(PROCESS_EVENT_ARGS)
+void webops_event_driver_http_process_event(PROCESS_EVENT_ARGS)
 {
   CURL *curl;
   CURLcode res;
@@ -54,8 +55,8 @@ void apm_driver_http_process_event(PROCESS_EVENT_ARGS)
     char *trace_to_send;
     size_t max_len = 0;
 
-    if (APM_G(http_max_backtrace_length) >= 0)
-        max_len = APM_G(http_max_backtrace_length);
+    if (WE_G(http_max_backtrace_length) >= 0)
+        max_len = WE_G(http_max_backtrace_length);
 
     trace_to_send = truncate_data(trace, max_len);
 
@@ -95,22 +96,22 @@ void apm_driver_http_process_event(PROCESS_EVENT_ARGS)
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
-    curl_easy_setopt(curl, CURLOPT_URL, APM_G(http_server));
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, APM_G(http_request_timeout));
+    curl_easy_setopt(curl, CURLOPT_URL, WE_G(http_server));
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, WE_G(http_request_timeout));
     if (APM_G(http_client_certificate) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_SSLCERT, APM_G(http_client_certificate));
+      curl_easy_setopt(curl, CURLOPT_SSLCERT, WE_G(http_client_certificate));
     }
     if (APM_G(http_client_key) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_SSLKEY, APM_G(http_client_key));
+      curl_easy_setopt(curl, CURLOPT_SSLKEY, WE_G(http_client_key));
     }
     if (APM_G(http_certificate_authorities) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_CAINFO, APM_G(http_certificate_authorities));
+      curl_easy_setopt(curl, CURLOPT_CAINFO, WE_G(http_certificate_authorities));
       curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     }
     
     res = curl_easy_perform(curl);
  
-    APM_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
+    WEBOPS_EVENT_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
 
     /* Always clean up. */
     curl_easy_cleanup(curl);

@@ -16,14 +16,17 @@
  +----------------------------------------------------------------------+
 */
 
+
+
 #ifndef DRIVER_HTTP_H
 #define DRIVER_HTTP_H
-
+#include "../webops_event.h"
+#include "php_ini.h"
 #include "zend_API.h"
 
-#define APM_E_http APM_E_ALL
+#define WEBOPS_EVENT_E_http WEBOPS_EVENT_E_ALL
 
-apm_driver_entry * apm_driver_http_create();
+webops_event_driver_entry * webops_event_driver_http_create();
 
 PHP_INI_MH(OnUpdateAPMhttpErrorReporting);
 

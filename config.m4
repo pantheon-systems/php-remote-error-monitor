@@ -6,5 +6,5 @@ PHP_ARG_ENABLE(
 
 if test $PHP_WEBOPS_EVENT != "no"; then
  PHP_SUBST(WEBOPS_EVENT_SHARED)
- PHP_NEW_EXTENSION(webops_event, webops_event.c   , $ext_shared)
+ PHP_NEW_EXTENSION(webops_event, webops_event.c, $ext_shared)
 fi
