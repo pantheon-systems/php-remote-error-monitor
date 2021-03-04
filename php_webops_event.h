@@ -55,82 +55,10 @@
 #define RD_DEF(var) zval *var; zend_bool var##_found;
 
 #ifdef ZTS
-  #define WE_G(v) TSRMG(webops_event_globals_id, zend_webops_event_globals *, v)
+  #define WE_G(v) TSRMG(webops_event_globals_id, webops_event_globals *, v)
 #else
   #define WE_G(v) (webops_event_globals.v)
 #endif
-
-#ifdef WE_DEBUGFILE
-  #define APM_INIT_DEBUG APM_G(debugfile) = fopen(APM_DEBUGFILE, "a+");
-  #define APM_DEBUG(...) if (APM_G(debugfile)) { fprintf(APM_G(debugfile), __VA_ARGS__); fflush(APM_G(debugfile)); }
-  #define APM_SHUTDOWN_DEBUG if (APM_G(debugfile)) { fclose(APM_G(debugfile)); APM_G(debugfile) = NULL; }
-#else
-#define WE_INIT_DEBUG
-#define WE_DEBUG(...)
-#define WE_SHUTDOWN_DEBUG
-#endif
-
-#define WEBOPS_EVENT_DRIVER_CREATE(name) \
-  void apm_driver_##name##_process_event(PROCESS_EVENT_ARGS); \
-  void apm_driver_##name##_process_stats(); \
-  int apm_driver_##name##_minit(int ); \
-  int apm_driver_##name##_rinit(); \
-  int apm_driver_##name##_mshutdown(); \
-  int apm_driver_##name##_rshutdown(); \
-  PHP_INI_MH(OnUpdateAPM##name##ErrorReporting) \
-  { \
-    APM_GLOBAL(name, error_reporting) = (apm_error_reporting_new_value : APM_E_##name); \
-    return SUCCESS; \
-  } \
-  zend_bool apm_driver_##name##_is_enabled() \
-  { \
-    return APM_GLOBAL(name, enabled); \
-  } \
-  int apm_driver_##name##_error_reporting() \
-  { \
-    return APM_GLOBAL(name, error_reporting); \
-  } \
-  zend_bool apm_driver_##name##_want_event(int event_type, int error_level, char *msg ) \
-  { \
-    return \
-      APM_GLOBAL(name, enabled) \
-      && ( \
-        (event_type == APM_EVENT_EXCEPTION && APM_GLOBAL(name, exception_mode) == 2) \
-        || \
-        (event_type == APM_EVENT_ERROR && ((APM_GLOBAL(name, exception_mode) == 1) || (strncmp(msg, "Uncaught exception", 18) != 0)) && (error_level & APM_GLOBAL(name, error_reporting))) \
-      ) \
-      && ( \
-        !APM_G(currently_silenced) || APM_GLOBAL(name, process_silenced_events) \
-      ) \
-    ; \
-  } \
-  zend_bool apm_driver_##name##_want_stats() \
-  { \
-    return \
-      APM_GLOBAL(name, enabled) \
-      && ( \
-        APM_GLOBAL(name, stats_enabled)\
-      ) \
-    ; \
-  } \
-  apm_driver_entry * apm_driver_##name##_create() \
-  { \
-    apm_driver_entry * driver_entry; \
-    driver_entry = (apm_driver_entry *) malloc(sizeof(apm_driver_entry)); \
-    driver_entry->driver.process_event = apm_driver_##name##_process_event; \
-    driver_entry->driver.minit = apm_driver_##name##_minit; \
-    driver_entry->driver.rinit = apm_driver_##name##_rinit; \
-    driver_entry->driver.mshutdown = apm_driver_##name##_mshutdown; \
-    driver_entry->driver.rshutdown = apm_driver_##name##_rshutdown; \
-    driver_entry->driver.process_stats = apm_driver_##name##_process_stats; \
-    driver_entry->driver.is_enabled = apm_driver_##name##_is_enabled; \
-    driver_entry->driver.error_reporting = apm_driver_##name##_error_reporting; \
-    driver_entry->driver.want_event = apm_driver_##name##_want_event; \
-    driver_entry->driver.want_stats = apm_driver_##name##_want_stats; \
-    driver_entry->driver.is_request_created = 0; \
-    driver_entry->next = NULL; \
-    return driver_entry; \
-  }
 
 typedef struct webops_event {
     int event_type;
@@ -189,7 +117,24 @@ ZEND_BEGIN_MODULE_GLOBALS(webops_event)
     zend_bool enabled;
     /* Application identifier, helps identifying which application is being monitored */
     char      *application_id;
+    /* Boolean controlling whether the driver is active and whether to send data to a REST endpoint */
+    zend_bool event_enabled;
+    zend_bool http_enabled;
+    /* Boolean controlling the collection of stats */
+    zend_bool http_stats_enabled;
+    /* (unused for HTTP) */
+    long http_exception_mode;
+    /* (unused for HTTP) */
+    int http_error_reporting;
+    /* Option to process silenced events */
+    zend_bool http_process_silenced_events;
 
+    long http_request_timeout;
+    char *http_server;
+    char *http_client_certificate;
+    char *http_client_key;
+    char *http_certificate_authorities;
+    long http_max_backtrace_length;
 ZEND_END_MODULE_GLOBALS(webops_event)
 
 ZEND_EXTERN_MODULE_GLOBALS(webops_event)
