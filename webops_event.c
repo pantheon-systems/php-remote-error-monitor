@@ -5,6 +5,7 @@
 #include "php_ini.h"
 #include "zend_API.h"
 #include "zend_types.h"
+#include "zend_string.h"
 #include "zend_exceptions.h"
 #include "zend_extensions.h"
 #include "zend_interfaces.h"
@@ -12,6 +13,7 @@
 #include "ext/pcre/php_pcre.h"
 #include "spprintf.h"
 #include "webops_event.h"
+#include "backtrace.h"
 
 #define PRINT(what) fprintf(stderr, what "\n");
 
@@ -41,24 +43,111 @@ PHP_INI_BEGIN()
   STD_PHP_INI_ENTRY("webops_event.http_max_backtrace_length", "0", PHP_INI_ALL, OnUpdateLong, http_max_backtrace_length, zend_webops_event_globals, webops_event_globals)
 PHP_INI_END()
 
+char *truncate_data(char *input_str, size_t max_len)
+{
+  char *truncated;
+  input_str = input_str ? input_str : NULL;
+  if (max_len == 0)
+    return strdup(input_str);
+  truncated = strndup(input_str, max_len);
+  return truncated;
+}
 
-static void webops_event_process(int type, const char *error_filename, const uint32_t error_lineno, zend_string *message) {
+static void webops_event_process(int type, const char *error_filename, const uint32_t error_lineno, zend_string *message, char * trace) {
+  CURL *curl;
+  CURLcode res;
 
+  curl_global_init(CURL_GLOBAL_ALL);
+  curl = curl_easy_init();
+  if(curl) {
+    struct curl_httppost *formpost = NULL;
+    struct curl_httppost *lastptr = NULL;
+    struct curl_slist *headerlist = NULL;
+    static const char buf[] = "Expect:";
+    char int2string[64];
+    char *trace_to_send;
+    size_t max_len = 0;
+
+    if (WE_G(http_max_backtrace_length) >= 0)
+      max_len = WE_G(http_max_backtrace_length);
+
+    trace_to_send = truncate_data(trace, max_len);
+
+    sprintf(int2string, "%d", type);
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "type",
+                 CURLFORM_COPYCONTENTS, int2string,
+                 CURLFORM_END);
+
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "file",
+                 CURLFORM_COPYCONTENTS, error_filename ? error_filename : "",
+                 CURLFORM_END);
+
+    sprintf(int2string, "%d", error_lineno);
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "line",
+                 CURLFORM_COPYCONTENTS, int2string,
+                 CURLFORM_END);
+
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "message",
+                 CURLFORM_COPYCONTENTS, message ? ZSTR_VAL(message) : "",
+                 CURLFORM_END);
+
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "backtrace",
+                 CURLFORM_COPYCONTENTS, trace_to_send,
+                 CURLFORM_END);
+
+    headerlist = curl_slist_append(headerlist, buf);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+    curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+
+    curl_easy_setopt(curl, CURLOPT_URL, WE_G(http_server));
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, WE_G(http_request_timeout));
+    if (WE_G(http_client_certificate) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_SSLCERT, WE_G(http_client_certificate));
+    }
+    if (WE_G(http_client_key) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_SSLKEY, WE_G(http_client_key));
+    }
+    if (WE_G(http_certificate_authorities) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_CAINFO, WE_G(http_certificate_authorities));
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    }
+
+    res = curl_easy_perform(curl);
+
+    // APM_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
+
+    /* Always clean up. */
+    curl_easy_cleanup(curl);
+    free(trace_to_send);
+  }
 }
 
 
 static int webops_event_zend_extension_startup(zend_extension *ext) {
-  PRINT("WEBOPS_EVENT zend hook startup!");
+  // PRINT("WEBOPS_EVENT zend hook startup!");
   return SUCCESS;
 }
 
 static void webops_event_zend_extension_shutdown(zend_extension *ext) {
-  PRINT("WEBOPS_EVENT zend hook shutdown!");
+  // PRINT("WEBOPS_EVENT zend hook shutdown!");
 }
 
 
 static void webops_event_error_callback(int type, const char *error_filename, const uint32_t error_lineno, zend_string *args) {
-  webops_event_process(WEBOPS_EVENT_ERROR, error_filename, error_lineno, args);
+  smart_str trace_str = {0};
+  append_backtrace(&trace_str);
+  smart_str_0(&trace_str);
+  webops_event_process(WEBOPS_EVENT_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 }
 
 
@@ -66,6 +155,9 @@ static void webops_event_exception_handler(zend_object *exception) {
   zval *message, *file, *line, rv;
   int type;
   zend_class_entry *default_ce;
+  smart_str trace_str = {0};
+  append_backtrace(&trace_str);
+  smart_str_0(&trace_str);
 
   default_ce = zend_get_exception_base(exception);
   // zend_class_entry *scope, zend_object *object, const char *name, size_t name_length, bool silent, zval *rv
@@ -73,7 +165,7 @@ static void webops_event_exception_handler(zend_object *exception) {
   file = zend_read_property(default_ce, exception, "file", sizeof("file")-1, 0, &rv);
   line = zend_read_property(default_ce, exception, "line", sizeof("line")-1, 0, &rv);
 
-  webops_event_process(WEBOPS_EVENT_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message));
+  webops_event_process(WEBOPS_EVENT_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message), trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 }
 
 
@@ -83,19 +175,19 @@ static void webops_event_zend_extension_activate(void) {
 }
 
 static void webops_event_zend_extension_deactivate(void) {
-  PRINT("WEBOPS_EVENT zend hook deactivate!");
+  // PRINT("WEBOPS_EVENT zend hook deactivate!");
 }
 
 static void webops_event_zend_extension_message_handler(int code, void *ext) {
-  PRINT("WEBOPS_EVENT zend hook message handler!");
+  // PRINT("WEBOPS_EVENT zend hook message handler!");
 }
 
 static void webops_event_zend_extension_op_array_handler(zend_op_array *op_array) {
-  PRINT("WEBOPS_EVENT zend hook ope_array_handler!");
+  // PRINT("WEBOPS_EVENT zend hook ope_array_handler!");
 }
 
 static void webops_event_zend_extension_fcall_begin_handler(zend_execute_data *ex) {
-  PRINT("WEBOPS_EVENT zend hook fcall_begin_handler!");
+  // PRINT("WEBOPS_EVENT zend hook fcall_begin_handler!");
 }
 
 
