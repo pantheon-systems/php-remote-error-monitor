@@ -34,10 +34,12 @@ This module is sponsored by and enabled in production on [PANTHEON](https://pant
 
 ## Authors
 
-Davide Mendolia
+[Davide Mendolia]()
 
-Patrick Allaert
+[Patrick Allaert](https://github.com/patrickallaert)
 
-David Strauss
+[David Strauss](https://github.com/davidstrauss)
+
+[Greg Anderson](https://github.com/greg-1-anderson)
 
 [Tom Stovall](https://github.com/stovak) 2021-FEB
