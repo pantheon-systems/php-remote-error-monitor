@@ -34,4 +34,10 @@ This module is sponsored by and enabled in production on [PANTHEON](https://pant
 
 ## Authors
 
+Davide Mendolia
+
+Patrick Allaert
+
+David Strauss
+
 [Tom Stovall](https://github.com/stovak) 2021-FEB
