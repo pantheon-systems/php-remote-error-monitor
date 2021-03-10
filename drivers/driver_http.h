@@ -20,13 +20,13 @@
 
 #ifndef DRIVER_HTTP_H
 #define DRIVER_HTTP_H
-#include "../webops_event.h"
+#include "../remote_error_monitor.h"
 #include "php_ini.h"
 #include "zend_API.h"
 
-#define WEBOPS_EVENT_E_http WEBOPS_EVENT_E_ALL
+#define REMOTE_ERROR_MONITOR_E_http REMOTE_ERROR_MONITOR_E_ALL
 
-webops_event_driver_entry * webops_event_driver_http_create();
+remote_error_monitor_driver_entry * remote_error_monitor_driver_http_create();
 
 PHP_INI_MH(OnUpdateAPMhttpErrorReporting);
 

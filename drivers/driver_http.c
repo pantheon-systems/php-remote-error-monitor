@@ -19,14 +19,14 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include "php_ini.h"
-#include "../php_webops_event.h"
-#include "../webops_event.h"
+#include "../php_remote_error_monitor.h"
+#include "../remote_error_monitor.h"
 
 #include "driver_http.h"
 
-ZEND_EXTERN_MODULE_GLOBALS(webops_event);
+ZEND_EXTERN_MODULE_GLOBALS(remote_error_monitor);
 
-WEBOPS_EVENT_DRIVER_CREATE(http)
+REMOTE_ERROR_MONITOR_DRIVER_CREATE(http)
 
 char *truncate_data(char *input_str, size_t max_len)
 {
@@ -39,7 +39,7 @@ char *truncate_data(char *input_str, size_t max_len)
 }
 
 /* Insert an event in the backend */
-void webops_event_driver_http_process_event(PROCESS_EVENT_ARGS)
+void remote_error_monitor_driver_http_process_event(PROCESS_EVENT_ARGS)
 {
   CURL *curl;
   CURLcode res;
@@ -111,7 +111,7 @@ void webops_event_driver_http_process_event(PROCESS_EVENT_ARGS)
     
     res = curl_easy_perform(curl);
  
-    WEBOPS_EVENT_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
+    REMOTE_ERROR_MONITOR_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
 
     /* Always clean up. */
     curl_easy_cleanup(curl);

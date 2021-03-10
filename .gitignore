@@ -16,6 +16,6 @@
 /Makefile.objects
 /modules
 /libtool
-/webops_event.la
-/webops_event.lo
+/remote_error_monitor.la
+/remote_error_monitor.lo
 /tmp-php.ini

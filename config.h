@@ -1,8 +1,8 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Whether to build webops_event as dynamic module */
-#define COMPILE_DL_WEBOPS_EVENT 1
+/* Whether to build remote_error_monitor as dynamic module */
+#define COMPILE_DL_REMOTE_ERROR_MONITOR 1
 
 /* Define if crypt_r has uses CRYPTD */
 /* #undef CRYPT_R_CRYPTD */

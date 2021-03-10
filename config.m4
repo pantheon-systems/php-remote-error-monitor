@@ -1,10 +1,10 @@
 PHP_ARG_ENABLE(
- webops_event,
- [ Whether to enable the "webops_event" extension ],
- [ --enable-webops-event        Enable "webops_event" extension support ]
+ remote_error_monitor,
+ [ Whether to enable the "remote_error_monitor" extension ],
+ [ --enable-remote-error-monitor        Enable "remote_error_monitor" extension support ]
 )
 
-if test $PHP_WEBOPS_EVENT != "no"; then
- PHP_SUBST(WEBOPS_EVENT_SHARED)
- PHP_NEW_EXTENSION(webops_event, webops_event.c, $ext_shared)
+if test $PHP_REMOTE_ERROR_MONITOR != "no"; then
+ PHP_SUBST(REMOTE_ERROR_MONITOR_SHARED)
+ PHP_NEW_EXTENSION(remote_error_monitor, remote_error_monitor.c, $ext_shared)
 fi

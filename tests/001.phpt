@@ -1,10 +1,10 @@
 --TEST--
-Check for webops_event presence
+Check for remote_error_monitor presence
 --SKIPIF--
-<?php if (!extension_loaded("webops_event")) print "skip"; ?>
+<?php if (!extension_loaded("remote_error_monitor")) print "skip"; ?>
 --FILE--
 <?php
-    echo "webops_event extension is available";
+    echo "remote_error_monitor extension is available";
 /*
 	you can add regression tests for your extension here
 
@@ -18,4 +18,4 @@ Check for webops_event presence
 */
 ?>
 --EXPECT--
-webops_event extension is available
+remote_error_monitor extension is available

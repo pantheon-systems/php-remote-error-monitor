@@ -22,32 +22,32 @@
   #define E_EXCEPTION (1<<15L)
 #endif
 
-#ifndef PHP_WEBOPS_EVENT_H
+#ifndef PHP_REMOTE_ERROR_MONITOR_H
   /* Prevent double inclusion */
-  #define PHP_WEBOPS_EVENT_H
+  #define PHP_REMOTE_ERROR_MONITOR_H
 
   /* Extension Properties
    *
    */
-  #define WEBOPS_EVENT_EXTNAME "webops_event"
-  #define WEBOPS_EVENT_EXTVER "1.0"
+  #define REMOTE_ERROR_MONITOR_EXTNAME "remote_error_monitor"
+  #define REMOTE_ERROR_MONITOR_EXTVER "1.0"
 
   /* Define the entry point symbol.
    *
    */
-  #define phpext_webops_event_ptr &webops_event_module_entry
-  extern zend_module_entry webops_event_module_entry;
+  #define phpext_remote_error_monitor_ptr &remote_error_monitor_module_entry
+  extern zend_module_entry remote_error_monitor_module_entry;
 
   #ifdef PHP_WIN32
-    #define PHP_WEBOPS_EVENT_API __declspec(dllexport)
+    #define PHP_REMOTE_ERROR_MONITOR_API __declspec(dllexport)
   #else
-    #define PHP_WEBOPS_EVENT_API
+    #define PHP_REMOTE_ERROR_MONITOR_API
   #endif
 
   #define WEBOPS_E_ALL (E_ALL | E_STRICT)
 
-  #define WEBOPS_EVENT_ERROR 1
-  #define WEBOPS_EVENT_EXCEPTION 2
+  #define REMOTE_ERROR_MONITOR_ERROR 1
+  #define REMOTE_ERROR_MONITOR_EXCEPTION 2
 
 #endif
 
@@ -55,26 +55,26 @@
 #define RD_DEF(var) zval *var; zend_bool var##_found;
 
 #ifdef ZTS
-  #define WE_G(v) TSRMG(webops_event_globals_id, webops_event_globals *, v)
+  #define WE_G(v) TSRMG(remote_error_monitor_globals_id, remote_error_monitor_globals *, v)
 #else
-  #define WE_G(v) (webops_event_globals.v)
+  #define WE_G(v) (remote_error_monitor_globals.v)
 #endif
 
-typedef struct webops_event {
+typedef struct remote_error_monitor {
     int event_type;
     int type;
     char * error_filename;
     uint64_t error_lineno;
     char * msg;
     char * trace;
-} webops_event;
+} remote_error_monitor;
 
-typedef struct webops_event_entry {
-    webops_event event;
-    struct webops_event_entry *next;
-} webops_event_entry;
+typedef struct remote_error_monitor_entry {
+    remote_error_monitor event;
+    struct remote_error_monitor_entry *next;
+} remote_error_monitor_entry;
 
-typedef struct webops_event_driver {
+typedef struct remote_error_monitor_driver {
     void (* process_event)(PROCESS_EVENT_ARGS);
     void (* process_stats)();
     int (* ZEND_MINIT)(int );
@@ -86,15 +86,15 @@ typedef struct webops_event_driver {
     int (*want_stats)();
     int (* error_reporting)();
     int is_request_created;
-} webops_event_driver;
+} remote_error_monitor_driver;
 
-typedef struct webops_event_driver_entry {
-    webops_event_driver driver;
-    struct webops_event_driver_entry *next;
-} webops_event_driver_entry;
+typedef struct remote_error_monitor_driver_entry {
+    remote_error_monitor_driver driver;
+    struct remote_error_monitor_driver_entry *next;
+} remote_error_monitor_driver_entry;
 
 
-typedef struct webops_event_request_data {
+typedef struct remote_error_monitor_request_data {
     RD_DEF(uri);
     RD_DEF(host);
     RD_DEF(ip);
@@ -105,14 +105,14 @@ typedef struct webops_event_request_data {
 
     zend_bool initialized, cookies_found, post_vars_found;
     smart_str cookies, post_vars;
-} webops_event_request_data;
+} remote_error_monitor_request_data;
 
 
 
 
 
 /* Extension globals */
-ZEND_BEGIN_MODULE_GLOBALS(webops_event)
+ZEND_BEGIN_MODULE_GLOBALS(remote_error_monitor)
     /* Boolean controlling whether the extension is globally active or not */
     zend_bool enabled;
     /* Application identifier, helps identifying which application is being monitored */
@@ -135,11 +135,11 @@ ZEND_BEGIN_MODULE_GLOBALS(webops_event)
     char *http_client_key;
     char *http_certificate_authorities;
     long http_max_backtrace_length;
-ZEND_END_MODULE_GLOBALS(webops_event)
+ZEND_END_MODULE_GLOBALS(remote_error_monitor)
 
-ZEND_EXTERN_MODULE_GLOBALS(webops_event)
+ZEND_EXTERN_MODULE_GLOBALS(remote_error_monitor)
 
-ZEND_DECLARE_MODULE_GLOBALS(webops_event);
+ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
 
 
