@@ -1,5 +1,5 @@
 PHP_ARG_ENABLE(
- remote_error_monitor,
+ [remote_error_monitor],
  [ Whether to enable the "remote_error_monitor" extension ],
  [ --enable-remote-error-monitor        Enable "remote_error_monitor" extension support ]
 )

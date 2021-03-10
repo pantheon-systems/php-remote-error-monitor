@@ -11,6 +11,10 @@
 #include "zend_interfaces.h"
 #include "../ext/standard/info.h"
 
+#ifdef ZTS
+#include "TSRM.h"
+#endif
+
 /* Import configure options
  when building outside of
  the PHP source tree */
@@ -29,14 +33,14 @@
   /* Extension Properties
    *
    */
-  #define REMOTE_ERROR_MONITOR_EXTNAME "remote_error_monitor"
-  #define REMOTE_ERROR_MONITOR_EXTVER "1.0"
+  #define PHP_REMOTE_ERROR_MONITOR_EXTNAME "remote_error_monitor"
+  #define PHP_REMOTE_ERROR_MONITOR_VERSION "1.0"
 
   /* Define the entry point symbol.
    *
    */
-  #define phpext_remote_error_monitor_ptr &remote_error_monitor_module_entry
   extern zend_module_entry remote_error_monitor_module_entry;
+  #define phpext_remote_error_monitor_ptr &remote_error_monitor_module_entry
 
   #ifdef PHP_WIN32
     #define PHP_REMOTE_ERROR_MONITOR_API __declspec(dllexport)
@@ -54,11 +58,7 @@
 #define PROCESS_EVENT_ARGS int type, char * error_filename, uint64_t error_lineno, char * msg, char * trace
 #define RD_DEF(var) zval *var; zend_bool var##_found;
 
-#ifdef ZTS
-  #define WE_G(v) TSRMG(remote_error_monitor_globals_id, remote_error_monitor_globals *, v)
-#else
-  #define WE_G(v) (remote_error_monitor_globals.v)
-#endif
+
 
 typedef struct remote_error_monitor {
     int event_type;
@@ -141,9 +141,22 @@ ZEND_EXTERN_MODULE_GLOBALS(remote_error_monitor)
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
+#ifdef ZTS
+#define REM_GLOBAL(v) TSRMG(remote_error_monitor_globals_id, zend_remote_error_monitor_globals *)
+#else
+#define REM_GLOBAL(v) (zend_remote_error_monitor_globals.v)
+#endif
+
+#ifdef REM_GLOBAL
+#define REM_G REM_GLOBAL
+#endif
 
 
-
-
+#ifdef COMPILE_DL_REMOTE_ERROR_MONITOR
+#ifdef ZTS
+ZEND_TSRMLS_CACHE_DEFINE()
+#endif
+ZEND_GET_MODULE(remote_error_monitor)
+#endif
 
 
