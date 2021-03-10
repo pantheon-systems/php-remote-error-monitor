@@ -1,4 +1,4 @@
-# **php-webops-event**
+# **remote-error-monitor**
 
 ## Requires
 
