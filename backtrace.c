@@ -16,7 +16,6 @@
  +----------------------------------------------------------------------+
 */
 
-#include "php_apm.h"
 #include "php.h"
 #include "zend_types.h"
 #include "ext/standard/php_string.h"
