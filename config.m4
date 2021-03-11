@@ -6,5 +6,5 @@ PHP_ARG_ENABLE(
 
 if test $PHP_REMOTE_ERROR_MONITOR != "no"; then
  PHP_SUBST(REMOTE_ERROR_MONITOR_SHARED)
- PHP_NEW_EXTENSION(remote_error_monitor, remote_error_monitor.c, $ext_shared)
+ PHP_NEW_EXTENSION(remote_error_monitor, remote_error_monitor.c backtrace.c, $ext_shared)
 fi
