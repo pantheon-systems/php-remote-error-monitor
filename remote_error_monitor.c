@@ -73,12 +73,6 @@ PHP_INI_END()
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
-#ifdef ZTS
-  #define REM_GLOBAL(v) TSRMG( remote_error_monitor_globals_id, remote_error_monitor_globals *, v )
-#else
-  #define REM_GLOBAL(v) ( remote_error_monitor_globals.v )
-#endif
-
 void (*old_error_cb)(int type, const char *error_filename, const uint32_t error_lineno, zend_string *args);
 void (*old_exception_cb)(zend_object *exception);
 

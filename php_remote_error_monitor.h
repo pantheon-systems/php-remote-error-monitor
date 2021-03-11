@@ -91,6 +91,12 @@ ZEND_EXTERN_MODULE_GLOBALS(remote_error_monitor)
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
+#ifdef ZTS
+#define REM_GLOBAL(v) TSRMG( remote_error_monitor_globals_id, remote_error_monitor_globals *, v )
+#else
+#define REM_GLOBAL(v) ( remote_error_monitor_globals.v )
+#endif
+
 
 #ifdef COMPILE_DL_REMOTE_ERROR_MONITOR
 #ifdef ZTS

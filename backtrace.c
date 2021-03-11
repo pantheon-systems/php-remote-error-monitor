@@ -20,6 +20,7 @@
 #include "zend_types.h"
 #include "ext/standard/php_string.h"
 #include "Zend/zend_generators.h"
+#include "php_remote_error_monitor.h"
 #include "backtrace.h"
 
 static void debug_print_backtrace_args(zval *arg_array , smart_str *trace_str);
@@ -239,7 +240,7 @@ static void debug_print_backtrace_args(zval *arg_array, smart_str *trace_str)
 // See void zend_print_flat_zval_r in php/Zend/zend.c for template when adapting to newer php versions
 static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
 {
-  if (depth >= APM_G(dump_max_depth)) {
+  if (depth >= REM_GLOBAL(dump_max_depth)) {
     smart_str_appendl(trace_str, "/* [...] */", sizeof("/* [...] */") - 1);
     return;
   }
@@ -303,7 +304,7 @@ static void append_flat_hash(HashTable *ht , smart_str *trace_str, char is_objec
   zend_ulong num_key;
 
   ZEND_HASH_FOREACH_KEY_VAL_IND(ht, num_key, string_key, tmp) {
-    if (depth >= APM_G(dump_max_depth)) {
+    if (depth >= REM_GLOBAL(dump_max_depth)) {
       smart_str_appendl(trace_str, "/* [...] */", sizeof("/* [...] */") - 1);
       return;
     }
