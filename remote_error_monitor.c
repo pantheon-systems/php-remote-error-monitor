@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <curl/curl.h>
-#include "php_remote_error_monitor.h"
 #include "php.h"
 #include "php_ini.h"
 #include "zend_API.h"
@@ -12,18 +11,46 @@
 #include "zend_smart_str.h"
 #include "ext/pcre/php_pcre.h"
 #include "spprintf.h"
-#include "remote_error_monitor.h"
 #include "backtrace.h"
+#include "remote_error_monitor.h"
+#include "php_remote_error_monitor.h"
 
 #define PRINT(what) fprintf(stderr, what "\n");
 
 #define REMOTE_ERROR_MONITOR_ERROR 1
 #define REMOTE_ERROR_MONITOR_EXCEPTION 2
 
+typedef struct remote_error_monitor {
+    int event_type;
+    int type;
+    char * error_filename;
+    uint64_t error_lineno;
+    char * msg;
+    char * trace;
+} remote_error_monitor;
+
+typedef struct remote_error_monitor_entry {
+    remote_error_monitor event;
+    struct remote_error_monitor_entry *next;
+} remote_error_monitor_entry;
+
+typedef struct remote_error_monitor_request_data {
+    RD_DEF(uri);
+    RD_DEF(host);
+    RD_DEF(ip);
+    RD_DEF(referer);
+    RD_DEF(ts);
+    RD_DEF(script);
+    RD_DEF(method);
+
+    zend_bool initialized, cookies_found, post_vars_found;
+    smart_str cookies, post_vars;
+} remote_error_monitor_request_data;
+
 
 PHP_INI_BEGIN()
   /* Boolean controlling whether the extension is globally active or not */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.enabled", "1", PHP_INI_SYSTEM, OnUpdateBool, enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+  STD_PHP_INI_BOOLEAN("remote_error_monitor.enabled", "0", PHP_INI_SYSTEM, OnUpdateBool, enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   /* Application identifier, helps identifying which application is being monitored */
   STD_PHP_INI_ENTRY("remote_error_monitor.application_id", "My application", PHP_INI_ALL, OnUpdateString, application_id, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   /* Boolean controlling whether the event monitoring is active or not */
@@ -46,9 +73,14 @@ PHP_INI_END()
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
+#ifdef ZTS
+  #define REM_GLOBAL(v) TSRMG( remote_error_monitor_globals_id, remote_error_monitor_globals *, v )
+#else
+  #define REM_GLOBAL(v) ( remote_error_monitor_globals.v )
+#endif
+
 void (*old_error_cb)(int type, const char *error_filename, const uint32_t error_lineno, zend_string *args);
-
-
+void (*old_exception_cb)(zend_object *exception);
 
 
 char *truncate_data(char *input_str, size_t max_len)
@@ -77,8 +109,8 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
     char *trace_to_send;
     size_t max_len = 0;
 
-    if (REM_G(http_max_backtrace_length) >= 0)
-      max_len = REM_G(http_max_backtrace_length);
+    if (REM_GLOBAL(http_max_backtrace_length) >= 0)
+      max_len = REM_GLOBAL(http_max_backtrace_length);
 
     trace_to_send = truncate_data(trace, max_len);
 
@@ -118,16 +150,16 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
-    curl_easy_setopt(curl, CURLOPT_URL, REM_G(http_server));
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, REM_G(http_request_timeout));
-    if (REM_G(http_client_certificate) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_SSLCERT, REM_G(http_client_certificate));
+    curl_easy_setopt(curl, CURLOPT_URL, REM_GLOBAL(http_server));
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, REM_GLOBAL(http_request_timeout));
+    if (REM_GLOBAL(http_client_certificate) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_SSLCERT, REM_GLOBAL(http_client_certificate));
     }
-    if (REM_G(http_client_key) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_SSLKEY, REM_G(http_client_key));
+    if (REM_GLOBAL(http_client_key) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_SSLKEY, REM_GLOBAL(http_client_key));
     }
-    if (REM_G(http_certificate_authorities) != NULL) {
-      curl_easy_setopt(curl, CURLOPT_CAINFO, REM_G(http_certificate_authorities));
+    if (REM_GLOBAL(http_certificate_authorities) != NULL) {
+      curl_easy_setopt(curl, CURLOPT_CAINFO, REM_GLOBAL(http_certificate_authorities));
       curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     }
 
@@ -172,11 +204,12 @@ static void remote_error_monitor_exception_handler(zend_object *exception)
 
 PHP_MINIT_FUNCTION(remote_error_monitor)
 {
+  PRINT("MODULE INIT FUNCTION!");
   REGISTER_INI_ENTRIES();
   old_error_cb = zend_error_cb;
+  old_exception_cb = zend_throw_exception_hook;
   zend_error_cb = remote_error_monitor_error_callback;
   zend_throw_exception_hook = remote_error_monitor_exception_handler;
-  PRINT("MODULE INIT FUNCTION!");
   return SUCCESS;
 }
 
@@ -184,6 +217,7 @@ PHP_MSHUTDOWN_FUNCTION(remote_error_monitor)
 {
   UNREGISTER_INI_ENTRIES();
   zend_error_cb = old_error_cb;
+  zend_throw_exception_hook = old_exception_cb;
   PRINT("MODULE SHUTDOWN FUNCTION!");
   return SUCCESS;
 }
@@ -192,14 +226,10 @@ PHP_MINFO_FUNCTION(remote_error_monitor)
 {
   php_info_print_table_start();
   //https://pantheon.io/sites/default/files/logos/logo-382x120-01.svg
-
   php_info_print_table_header(2, "Remote Error Monitor Support", "enabled");
   php_info_print_table_row(2, "Version", PHP_REMOTE_ERROR_MONITOR_VERSION);
-
   php_info_print_table_end();
-
   DISPLAY_INI_ENTRIES();
-
 }
 
 PHP_GINIT_FUNCTION(remote_error_monitor)
@@ -207,7 +237,7 @@ PHP_GINIT_FUNCTION(remote_error_monitor)
   #if defined(COMPILE_DL_REMOTE_ERROR_MONITOR) && defined(ZTS)
     ZEND_TSRMLS_CACHE_UPDATE();
   #endif
-
+  remote_error_monitor_globals->enabled = false;
   ZEND_SECURE_ZERO(remote_error_monitor_globals, sizeof(*remote_error_monitor_globals));
 }
 
