@@ -53,22 +53,13 @@ PHP_INI_BEGIN()
   STD_PHP_INI_BOOLEAN("remote_error_monitor.enabled", "0", PHP_INI_SYSTEM, OnUpdateBool, enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   /* Application identifier, helps identifying which application is being monitored */
   STD_PHP_INI_ENTRY("remote_error_monitor.application_id", "My application", PHP_INI_ALL, OnUpdateString, application_id, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* Boolean controlling whether the event monitoring is active or not */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.event_enabled", "1", PHP_INI_ALL, OnUpdateBool, event_enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* Boolean controlling whether the http process should send to REST endpoint */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.http_enabled", "1", PHP_INI_ALL, OnUpdateBool, http_enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* Boolean controlling the collection of stats */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.http_stats_enabled", "1", PHP_INI_ALL, OnUpdateBool, http_stats_enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* Control which exceptions to collect (0: none exceptions collected, 1: collect uncaught exceptions (default), 2: collect ALL exceptions) */
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_exception_mode","1", PHP_INI_PERDIR, OnUpdateLongGEZero, http_exception_mode, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   /* process silenced events? */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.http_process_silenced_events", "1", PHP_INI_PERDIR, OnUpdateBool, http_process_silenced_events, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   STD_PHP_INI_ENTRY("remote_error_monitor.http_request_timeout", "1000", PHP_INI_ALL, OnUpdateLong, http_request_timeout, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   STD_PHP_INI_ENTRY("remote_error_monitor.http_server", "http://localhost", PHP_INI_ALL, OnUpdateString, http_server, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   STD_PHP_INI_ENTRY("remote_error_monitor.http_client_certificate", NULL, PHP_INI_ALL, OnUpdateString, http_client_certificate, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   STD_PHP_INI_ENTRY("remote_error_monitor.http_client_key", NULL, PHP_INI_ALL, OnUpdateString, http_client_key, zend_remote_error_monitor_globals, remote_error_monitor_globals)
   STD_PHP_INI_ENTRY("remote_error_monitor.http_certificate_authorities", NULL, PHP_INI_ALL, OnUpdateString, http_certificate_authorities, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_max_backtrace_length", "0", PHP_INI_ALL, OnUpdateLong, http_max_backtrace_length, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+  STD_PHP_INI_ENTRY("remote_error_monitor.dump_max_depth", "0", PHP_INI_ALL, OnUpdateLong, dump_max_depth, zend_remote_error_monitor_globals, remote_error_monitor_globals)
 PHP_INI_END()
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
@@ -103,8 +94,8 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
     char *trace_to_send;
     size_t max_len = 0;
 
-    if (REM_GLOBAL(http_max_backtrace_length) >= 0)
-      max_len = REM_GLOBAL(http_max_backtrace_length);
+    if (REM_GLOBAL(dump_max_depth) >= 0)
+      max_len = REM_GLOBAL(dump_max_depth);
 
     trace_to_send = truncate_data(trace, max_len);
 
