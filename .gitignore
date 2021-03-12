@@ -36,3 +36,4 @@ tests/*/*.sh
 /remote_error_monitor.loT
 /tmp-php.ini
 /config.h.in~
+/backtrace.loT

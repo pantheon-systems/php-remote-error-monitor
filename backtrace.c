@@ -15,7 +15,7 @@
  | Authors: Patrick Allaert <patrickallaert@php.net>                    |
  +----------------------------------------------------------------------+
 */
-
+#include <stddef.h>
 #include "php.h"
 #include "zend_types.h"
 #include "ext/standard/php_string.h"
@@ -90,7 +90,7 @@ void append_backtrace(smart_str *trace_str )
 		}
 /* $this may be passed into regular internal functions */
     object = Z_OBJ(call->This);
-    zend_function *func = null;
+    zend_function *func = NULL;
     if (call->func) {
       func = call->func;
 
