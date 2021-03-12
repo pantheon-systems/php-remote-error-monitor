@@ -11,55 +11,26 @@
 #include "zend_smart_str.h"
 #include "ext/pcre/php_pcre.h"
 #include "spprintf.h"
-#include "backtrace.h"
-#include "remote_error_monitor.h"
 #include "php_remote_error_monitor.h"
 
 #define PRINT(what) fprintf(stderr, what "\n");
 
-#define REMOTE_ERROR_MONITOR_ERROR 1
-#define REMOTE_ERROR_MONITOR_EXCEPTION 2
-
-typedef struct remote_error_monitor {
-    int event_type;
-    int type;
-    char * error_filename;
-    uint64_t error_lineno;
-    char * msg;
-    char * trace;
-} remote_error_monitor;
-
-typedef struct remote_error_monitor_entry {
-    remote_error_monitor event;
-    struct remote_error_monitor_entry *next;
-} remote_error_monitor_entry;
-
-typedef struct remote_error_monitor_request_data {
-    RD_DEF(uri);
-    RD_DEF(host);
-    RD_DEF(ip);
-    RD_DEF(referer);
-    RD_DEF(ts);
-    RD_DEF(script);
-    RD_DEF(method);
-
-    zend_bool initialized, cookies_found, post_vars_found;
-    smart_str cookies, post_vars;
-} remote_error_monitor_request_data;
-
+#ifdef COMPILE_DL_REMOTE_ERROR_MONITOR
+  ZEND_GET_MODULE(remote_error_monitor)
+#endif
 
 PHP_INI_BEGIN()
-  /* Boolean controlling whether the extension is globally active or not */
-  STD_PHP_INI_BOOLEAN("remote_error_monitor.enabled", "0", PHP_INI_SYSTEM, OnUpdateBool, enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* Application identifier, helps identifying which application is being monitored */
-  STD_PHP_INI_ENTRY("remote_error_monitor.application_id", "My application", PHP_INI_ALL, OnUpdateString, application_id, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  /* process silenced events? */
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_request_timeout", "1000", PHP_INI_ALL, OnUpdateLong, http_request_timeout, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_server", "http://localhost", PHP_INI_ALL, OnUpdateString, http_server, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_client_certificate", NULL, PHP_INI_ALL, OnUpdateString, http_client_certificate, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_client_key", NULL, PHP_INI_ALL, OnUpdateString, http_client_key, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.http_certificate_authorities", NULL, PHP_INI_ALL, OnUpdateString, http_certificate_authorities, zend_remote_error_monitor_globals, remote_error_monitor_globals)
-  STD_PHP_INI_ENTRY("remote_error_monitor.dump_max_depth", "0", PHP_INI_ALL, OnUpdateLong, dump_max_depth, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+/* Boolean controlling whether the extension is globally active or not */
+STD_PHP_INI_BOOLEAN("remote_error_monitor.enabled", "0", PHP_INI_SYSTEM, OnUpdateBool, enabled, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+/* Application identifier, helps identifying which application is being monitored */
+STD_PHP_INI_ENTRY("remote_error_monitor.application_id", "My application", PHP_INI_ALL, OnUpdateString, application_id, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+/* process silenced events? */
+STD_PHP_INI_ENTRY("remote_error_monitor.http_request_timeout", "1000", PHP_INI_ALL, OnUpdateLong, http_request_timeout, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+STD_PHP_INI_ENTRY("remote_error_monitor.http_server", "http://localhost", PHP_INI_ALL, OnUpdateString, http_server, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+STD_PHP_INI_ENTRY("remote_error_monitor.http_client_certificate", NULL, PHP_INI_ALL, OnUpdateString, http_client_certificate, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+STD_PHP_INI_ENTRY("remote_error_monitor.http_client_key", NULL, PHP_INI_ALL, OnUpdateString, http_client_key, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+STD_PHP_INI_ENTRY("remote_error_monitor.http_certificate_authorities", NULL, PHP_INI_ALL, OnUpdateString, http_certificate_authorities, zend_remote_error_monitor_globals, remote_error_monitor_globals)
+STD_PHP_INI_ENTRY("remote_error_monitor.dump_max_depth", "0", PHP_INI_ALL, OnUpdateLong, dump_max_depth, zend_remote_error_monitor_globals, remote_error_monitor_globals)
 PHP_INI_END()
 
 ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
@@ -95,7 +66,9 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
     size_t max_len = 0;
 
     if (REM_GLOBAL(dump_max_depth) >= 0)
+    {
       max_len = REM_GLOBAL(dump_max_depth);
+    }
 
     trace_to_send = truncate_data(trace, max_len);
 
@@ -150,7 +123,6 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
 
     res = curl_easy_perform(curl);
 
-    // APM_DEBUG("[HTTP driver] Result: %s\n", curl_easy_strerror(res));
 
     /* Always clean up. */
     curl_easy_cleanup(curl);
@@ -162,7 +134,7 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
 static void remote_error_monitor_error_callback(int type, const char *error_filename, const uint32_t error_lineno, zend_string *args)
 {
   smart_str trace_str = {0};
-  append_backtrace(&trace_str);
+  //rem_append_backtrace(&trace_str);
   smart_str_0(&trace_str);
   remote_error_monitor_process(REMOTE_ERROR_MONITOR_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 }
@@ -174,7 +146,7 @@ static void remote_error_monitor_exception_handler(zend_object *exception)
   int type;
   zend_class_entry *default_ce;
   smart_str trace_str = {0};
-  append_backtrace(&trace_str);
+  //rem_append_backtrace(&trace_str);
   smart_str_0(&trace_str);
 
   default_ce = zend_get_exception_base(exception);
@@ -236,15 +208,6 @@ zend_module_entry remote_error_monitor_module_entry = {
     NULL,							                          /* PHP_RSHUTDOWN - Request shutdown */
     PHP_MINFO(remote_error_monitor),			/* PHP_MINFO - Module info */
     PHP_REMOTE_ERROR_MONITOR_VERSION,		/* Version */
-    STANDARD_MODULE_PROPERTIES,
     PHP_MODULE_GLOBALS(remote_error_monitor),
     PHP_GINIT(remote_error_monitor)
-
 };
-
-
-
-#ifdef COMPILE_DL_SAMPLE
-ZEND_GET_MODULE(remote_error_monitor)
-#endif
-

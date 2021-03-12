@@ -15,27 +15,32 @@
  | Authors: Patrick Allaert <patrickallaert@php.net>                    |
  +----------------------------------------------------------------------+
 */
+
+#include "php_remote_error_monitor.h"
 #include <stddef.h>
 #include "php.h"
 #include "zend_types.h"
 #include "ext/standard/php_string.h"
 #include "Zend/zend_generators.h"
-#include "php_remote_error_monitor.h"
 #include "backtrace.h"
 
-static void debug_print_backtrace_args(zval *arg_array , smart_str *trace_str);
-static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth);
-static void append_flat_hash(HashTable *ht , smart_str *trace_str, char is_object, char depth);
-static void debug_backtrace_get_args(zend_execute_data *call, zval *arg_array);
-static int append_variable(zval *expr, smart_str *trace_str);
-static char *apm_addslashes(char *str, uint length, int *new_length);
+ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
-void append_backtrace(smart_str *trace_str )
+static void  rem_debug_print_backtrace_args(zval *arg_array , smart_str *trace_str);
+static void  rem_append_flat_zval_r(zval *expr , smart_str *trace_str, char depth);
+static void  rem_append_flat_hash(HashTable *ht , smart_str *trace_str, char is_object, char depth);
+static void  rem_debug_backtrace_get_args(zend_execute_data *call, zval *arg_array);
+static int   rem_append_variable(zval *expr, smart_str *trace_str);
+static char *rem_addslashes(char *str, uint length, int *new_length);
+
+
+
+void rem_append_backtrace(smart_str *trace_str )
 {
 	/* backtrace variables */
 	zend_execute_data *ptr, *skip;
 	int lineno;
-	const char *function_name;
+	char *function_name;
 	const char *filename;
 	char *call_type;
 	const char *include_filename = NULL;
@@ -93,16 +98,17 @@ void append_backtrace(smart_str *trace_str )
     zend_function *func = NULL;
     if (call->func) {
       func = call->func;
-
-      zend_string option1 = ZSTR_VAL(object ? object->ce : func->common.scope);
-
-      zend_string option2 = func->common.function_name ?
-                            ZSTR_VAL(func->common.function_name) : "";
-
-      zend_string whichoption = (func->common.scope && func->common.scope->trait_aliases) ? option1 : option2;
-
-      if (whichoption && whichoption != "") {
-        function_name = whichoption;
+      if (object)
+      {
+        function_name = ZSTR_VAL(object->ce->name);
+      }
+      else if (func->common.scope->name)
+      {
+        function_name = ZSTR_VAL(func->common.scope->name);
+      }
+      else
+      {
+        function_name = ZSTR_VAL(func->common.function_name);
       }
     }
 
@@ -125,7 +131,7 @@ void append_backtrace(smart_str *trace_str )
         call_type = NULL;
       }
       if (func->type != ZEND_EVAL_CODE) {
-        debug_backtrace_get_args(call, &arg_array);
+        rem_debug_backtrace_get_args(call, &arg_array);
       }
     }
 
@@ -183,7 +189,7 @@ void append_backtrace(smart_str *trace_str )
 		}
 		smart_str_appendc(trace_str, '(');
     if (Z_TYPE(arg_array) != IS_UNDEF) {
-      debug_print_backtrace_args(&arg_array, trace_str);
+      rem_debug_print_backtrace_args(&arg_array, trace_str);
       zval_ptr_dtor(&arg_array);
     }
 
@@ -223,7 +229,7 @@ void append_backtrace(smart_str *trace_str )
 }
 
 
-static void debug_print_backtrace_args(zval *arg_array, smart_str *trace_str)
+static void rem_debug_print_backtrace_args(zval *arg_array, smart_str *trace_str)
 {
   zval *tmp;
   int i = 0;
@@ -232,13 +238,13 @@ static void debug_print_backtrace_args(zval *arg_array, smart_str *trace_str)
         if (i++) {
           smart_str_appendl(trace_str, ", ", 2);
         }
-        append_flat_zval_r(tmp, trace_str, 0);
+        rem_append_flat_zval_r(tmp, trace_str, 0);
       } ZEND_HASH_FOREACH_END();
 }
 
 
 // See void zend_print_flat_zval_r in php/Zend/zend.c for template when adapting to newer php versions
-static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
+static void rem_append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
 {
   if (depth >= REM_GLOBAL(dump_max_depth)) {
     smart_str_appendl(trace_str, "/* [...] */", sizeof("/* [...] */") - 1);
@@ -249,7 +255,7 @@ static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
     case IS_REFERENCE:
       ZVAL_DEREF(expr);
       smart_str_appendc(trace_str, '&');
-      append_flat_zval_r(expr, trace_str, depth);
+      rem_append_flat_zval_r(expr, trace_str, depth);
       break;
     case IS_ARRAY:
       smart_str_appendc(trace_str, '[');
@@ -260,7 +266,7 @@ static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
         }
         Z_PROTECT_RECURSION_P(expr);
       }
-      append_flat_hash(Z_ARRVAL_P(expr) , trace_str, 0, depth + 1);
+      rem_append_flat_hash(Z_ARRVAL_P(expr) , trace_str, 0, depth + 1);
       smart_str_appendc(trace_str, ']');
       if (Z_REFCOUNTED_P(expr)) {
         Z_UNPROTECT_RECURSION_P(expr);
@@ -284,19 +290,19 @@ static void append_flat_zval_r(zval *expr , smart_str *trace_str, char depth)
       }
       if (properties) {
         Z_PROTECT_RECURSION_P(expr);
-        append_flat_hash(properties , trace_str, 1, depth + 1);
+        rem_append_flat_hash(properties , trace_str, 1, depth + 1);
         Z_UNPROTECT_RECURSION_P(expr);
       }
       smart_str_appendc(trace_str, ')');
       break;
     }
     default:
-      append_variable(expr, trace_str);
+      rem_append_variable(expr, trace_str);
       break;
   }
 }
 
-static void append_flat_hash(HashTable *ht , smart_str *trace_str, char is_object, char depth)
+static void rem_append_flat_hash(HashTable *ht , smart_str *trace_str, char is_object, char depth)
 {
 	int i = 0;
   zval *tmp;
@@ -320,12 +326,12 @@ static void append_flat_hash(HashTable *ht , smart_str *trace_str, char is_objec
     }
 
     smart_str_appendl(trace_str, "] => ", 5);
-    append_flat_zval_r(tmp, trace_str, depth);
+    rem_append_flat_zval_r(tmp, trace_str, depth);
   }
   ZEND_HASH_FOREACH_END();
 }
 
-static int append_variable(zval *expr, smart_str *trace_str)
+static int rem_append_variable(zval *expr, smart_str *trace_str)
 {
 	zval expr_copy;
 	int use_copy;
@@ -352,7 +358,7 @@ static int append_variable(zval *expr, smart_str *trace_str)
 	}
 
 	if (is_string) {
-		temp = apm_addslashes(Z_STRVAL_P(expr), Z_STRLEN_P(expr), &new_len);
+		temp = rem_addslashes(Z_STRVAL_P(expr), Z_STRLEN_P(expr), &new_len);
 		smart_str_appendl(trace_str, temp, new_len);
 		smart_str_appendc(trace_str, '"');
 		if (temp) {
@@ -368,7 +374,7 @@ static int append_variable(zval *expr, smart_str *trace_str)
 	return Z_STRLEN_P(expr);
 }
 
-static void debug_backtrace_get_args(zend_execute_data *call, zval *arg_array)
+static void rem_debug_backtrace_get_args(zend_execute_data *call, zval *arg_array)
 {
   uint32_t num_args = ZEND_CALL_NUM_ARGS(call);
 
@@ -404,7 +410,7 @@ static void debug_backtrace_get_args(zend_execute_data *call, zval *arg_array)
   }
 }
 
-static char *apm_addslashes(char *str, uint length, int *new_length)
+static char *rem_addslashes(char *str, uint length, int *new_length)
 {
 	/* maximum string length, worst case situation */
 	char *new_str;

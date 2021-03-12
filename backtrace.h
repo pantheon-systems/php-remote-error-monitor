@@ -20,7 +20,7 @@
 #define BACKTRACE_H
 # include "zend_smart_str.h"
 
-void append_backtrace(smart_str *trace_str );
+void rem_append_backtrace(smart_str *trace_str);
 
 #endif
 

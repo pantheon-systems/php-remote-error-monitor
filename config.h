@@ -13,6 +13,9 @@
 /* Define if crypt_r uses struct crypt_data */
 /* #undef CRYPT_R_STRUCT_CRYPT_DATA */
 
+/* */
+#define HAVE_CURL 1
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
