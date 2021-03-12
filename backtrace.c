@@ -24,7 +24,6 @@
 #include "Zend/zend_generators.h"
 #include "backtrace.h"
 
-ZEND_DECLARE_MODULE_GLOBALS(remote_error_monitor);
 
 static void  rem_debug_print_backtrace_args(zval *arg_array , smart_str *trace_str);
 static void  rem_append_flat_zval_r(zval *expr , smart_str *trace_str, char depth);
