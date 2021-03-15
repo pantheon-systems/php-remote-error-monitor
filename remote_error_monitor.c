@@ -161,7 +161,7 @@ static void remote_error_monitor_exception_handler(zend_object *exception)
 
 PHP_MINIT_FUNCTION(remote_error_monitor)
 {
-  PRINT("MODULE INIT FUNCTION!");
+  /* PRINT("MODULE INIT FUNCTION!"); */
   REGISTER_INI_ENTRIES();
   old_error_cb = zend_error_cb;
   old_exception_cb = zend_throw_exception_hook;
@@ -175,14 +175,14 @@ PHP_MSHUTDOWN_FUNCTION(remote_error_monitor)
   UNREGISTER_INI_ENTRIES();
   zend_error_cb = old_error_cb;
   zend_throw_exception_hook = old_exception_cb;
-  PRINT("MODULE SHUTDOWN FUNCTION!");
+  /* PRINT("MODULE SHUTDOWN FUNCTION!"); */
   return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(remote_error_monitor)
 {
   php_info_print_table_start();
-  //https://pantheon.io/sites/default/files/logos/logo-382x120-01.svg
+  //TODO: add the pantheon logo: https://pantheon.io/sites/default/files/logos/logo-382x120-01.svg
   php_info_print_table_header(2, "Remote Error Monitor Support", "enabled");
   php_info_print_table_row(2, "Version", PHP_REMOTE_ERROR_MONITOR_VERSION);
   php_info_print_table_end();
