@@ -20,7 +20,6 @@ brew "re2c"
 brew "redis", restart_service: true
 brew "rust"
 brew "shellcheck"
-brew "vapor"
 brew "watchman"
 brew "ykman"
 brew "ykneomgr"
