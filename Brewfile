@@ -21,8 +21,4 @@ brew "redis", restart_service: true
 brew "rust"
 brew "shellcheck"
 brew "watchman"
-cask "docker"
-cask "google-cloud-sdk"
-cask "gpg-suite"
 cask "mark-text"
-cask "opensc"
