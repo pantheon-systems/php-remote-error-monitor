@@ -137,6 +137,9 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   //rem_append_backtrace(&trace_str);
   smart_str_0(&trace_str);
   remote_error_monitor_process(REMOTE_ERROR_MONITOR_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
+
+  /* Calling saved callback function for error handling */
+  old_error_cb(type, error_filename, error_lineno, args);
 }
 
 
