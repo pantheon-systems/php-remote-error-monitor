@@ -49,6 +49,11 @@ char *truncate_data(char *input_str, size_t max_len)
   return truncated;
 }
 
+size_t silence_curl_write_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+  return size;
+}
+
 static void remote_error_monitor_process(int type, const char *error_filename, const uint32_t error_lineno, zend_string *message, char * trace)
 {
   CURL *curl;
@@ -107,6 +112,7 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
     headerlist = curl_slist_append(headerlist, buf);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, silence_curl_write_cb);
 
     curl_easy_setopt(curl, CURLOPT_URL, REM_GLOBAL(http_server));
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, REM_GLOBAL(http_request_timeout));
@@ -130,16 +136,12 @@ static void remote_error_monitor_process(int type, const char *error_filename, c
   }
 }
 
-
 static void remote_error_monitor_error_callback(int type, const char *error_filename, const uint32_t error_lineno, zend_string *args)
 {
   smart_str trace_str = {0};
   //rem_append_backtrace(&trace_str);
   smart_str_0(&trace_str);
   remote_error_monitor_process(REMOTE_ERROR_MONITOR_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
-
-  /* Calling saved callback function for error handling */
-  old_error_cb(type, error_filename, error_lineno, args);
 }
 
 
