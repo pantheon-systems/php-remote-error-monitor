@@ -176,7 +176,7 @@ PHP_MINIT_FUNCTION(remote_error_monitor)
     old_exception_cb = zend_throw_exception_hook;
 
     zend_error_cb = remote_error_monitor_error_callback;
-    zend_throw_exception_hook = remote_error_monitor_exception_handler;
+    // zend_throw_exception_hook = remote_error_monitor_exception_handler;
   }
 
   return SUCCESS;
@@ -189,7 +189,7 @@ PHP_MSHUTDOWN_FUNCTION(remote_error_monitor)
   // Restore original handlers only if we swapped them
   if(REM_GLOBAL(enabled)) {
     zend_error_cb = old_error_cb;
-    zend_throw_exception_hook = old_exception_cb;
+    // zend_throw_exception_hook = old_exception_cb;
   }
 
   /* PRINT("MODULE SHUTDOWN FUNCTION!"); */
