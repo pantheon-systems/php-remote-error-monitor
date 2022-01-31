@@ -160,7 +160,8 @@ static void remote_error_monitor_exception_handler(zend_object *exception)
   file = zend_read_property(default_ce, exception, "file", sizeof("file")-1, 0, &rv);
   line = zend_read_property(default_ce, exception, "line", sizeof("line")-1, 0, &rv);
 
-  remote_error_monitor_process(REMOTE_ERROR_MONITOR_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message), trace_str.s ? ZSTR_VAL(trace_str.s) : "");
+  // We don't want to be reporting caught exceptions.
+  // remote_error_monitor_process(REMOTE_ERROR_MONITOR_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message), trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 }
 
 
