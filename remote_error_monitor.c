@@ -163,7 +163,8 @@ static void remote_error_monitor_exception_handler(zend_object *exception)
   file = zend_read_property(default_ce, exception, "file", sizeof("file")-1, 0, &rv);
   line = zend_read_property(default_ce, exception, "line", sizeof("line")-1, 0, &rv);
 
-  remote_error_monitor_process(REMOTE_ERROR_MONITOR_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message), trace_str.s ? ZSTR_VAL(trace_str.s) : "");
+  // We don't want to be reporting caught exceptions.
+  // remote_error_monitor_process(REMOTE_ERROR_MONITOR_EXCEPTION, Z_STRVAL_P(file), Z_LVAL_P(line), Z_STR_P(message), trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 }
 
 
@@ -171,18 +172,29 @@ PHP_MINIT_FUNCTION(remote_error_monitor)
 {
   /* PRINT("MODULE INIT FUNCTION!"); */
   REGISTER_INI_ENTRIES();
-  old_error_cb = zend_error_cb;
-  old_exception_cb = zend_throw_exception_hook;
-  zend_error_cb = remote_error_monitor_error_callback;
-  zend_throw_exception_hook = remote_error_monitor_exception_handler;
+
+  // Swap out error handlers only if module is enabled
+  if(REM_GLOBAL(enabled)) {
+    old_error_cb = zend_error_cb;
+    old_exception_cb = zend_throw_exception_hook;
+
+    zend_error_cb = remote_error_monitor_error_callback;
+    // zend_throw_exception_hook = remote_error_monitor_exception_handler;
+  }
+
   return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(remote_error_monitor)
 {
   UNREGISTER_INI_ENTRIES();
-  zend_error_cb = old_error_cb;
-  zend_throw_exception_hook = old_exception_cb;
+
+  // Restore original handlers only if we swapped them
+  if(REM_GLOBAL(enabled)) {
+    zend_error_cb = old_error_cb;
+    // zend_throw_exception_hook = old_exception_cb;
+  }
+
   /* PRINT("MODULE SHUTDOWN FUNCTION!"); */
   return SUCCESS;
 }
