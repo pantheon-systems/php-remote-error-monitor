@@ -156,6 +156,7 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   // if it was deployed AFTER a given date (and always call through on dev/multidev).
   // That way folks can preview on dev and only get the updated behavior on live after they deploy.
   const char* env = getenv("PANTHEON_ENVIRONMENT");
+  printf("PANTHEON_ENVIRONMENT[%s]\n", env);
   if ((env == NULL) || !strcmp(env, "live")) {
     /* Calling saved callback function for error handling */
     old_error_cb(type, error_filename, error_lineno, args);
