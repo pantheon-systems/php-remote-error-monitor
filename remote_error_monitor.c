@@ -50,6 +50,15 @@ char *truncate_data(char *input_str, size_t max_len)
   return truncated;
 }
 
+static bool remote_error_monitor_is_live_environment()
+{
+  const char* env = getenv("PANTHEON_ENVIRONMENT");
+  if (!env) {
+    return false;
+  }
+  return !strcmp(env, "live");
+}
+
 size_t remote_error_monitor_curl_write_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
   // curl writes the response to stdout unless we provide a callback to handle the response
@@ -162,15 +171,6 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
     /* Calling saved callback function for error handling */
     old_error_cb(type, error_filename, error_lineno, args);
   }
-}
-
-static bool remote_error_monitor_is_live_environment()
-{
-  const char* env = getenv("PANTHEON_ENVIRONMENT");
-  if (!env) {
-    return false;
-  }
-  return !strcmp(env, "live");
 }
 
 static void remote_error_monitor_exception_handler(zend_object *exception)
