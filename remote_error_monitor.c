@@ -150,6 +150,7 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   smart_str_0(&trace_str);
   remote_error_monitor_process(REMOTE_ERROR_MONITOR_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 
+
   // Gentle roll-out: first, do not call the old error handler at all in the live environment.
   // Once we are ready to enable this on dev / multidev environments, we can change
   // this check to only call through to the old_error_cb on the live environment
@@ -159,10 +160,20 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   const char* env = getenv("PANTHEON_ENVIRONMENT");
   printf("PANTHEON_ENVIRONMENT[%s]\n", env);
 
-  int is_live = !strcmp(env, "live");
-  printf("is_live[%d]\n", env);
+  int is_live;
 
-  if ((env == NULL) || is_live) {
+  if(env == NULL) {
+    is_live = 0;  // env == NULL is also not 'live'
+  } else {
+    if (strcmp(env, "live") == 0) {
+      is_live = 1;
+    } else {
+      is_live = 0;
+    }
+  }
+  printf("is_live[%d]\n", is_live);
+
+  if (!is_live) {
     printf("Calling default PHP error handler...\n");
     /* Calling saved callback function for error handling */
     old_error_cb(type, error_filename, error_lineno, args);
