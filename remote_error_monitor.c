@@ -155,9 +155,15 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   // this check to only call through to the old_error_cb on the live environment
   // if it was deployed AFTER a given date (and always call through on dev/multidev).
   // That way folks can preview on dev and only get the updated behavior on live after they deploy.
+
   const char* env = getenv("PANTHEON_ENVIRONMENT");
   printf("PANTHEON_ENVIRONMENT[%s]\n", env);
-  if ((env == NULL) || !strcmp(env, "live")) {
+
+  int is_live = !strcmp(env, "live");
+  printf("is_live[%d]\n", env);
+
+  if ((env == NULL) || is_live) {
+    printf("Calling default PHP error handler...\n");
     /* Calling saved callback function for error handling */
     old_error_cb(type, error_filename, error_lineno, args);
   }
