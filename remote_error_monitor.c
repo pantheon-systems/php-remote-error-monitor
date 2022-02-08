@@ -157,33 +157,21 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   // if it was deployed AFTER a given date (and always call through on dev/multidev).
   // That way folks can preview on dev and only get the updated behavior on live after they deploy.
 
-  const char* env = getenv("PANTHEON_ENVIRONMENT");
-  printf("PANTHEON_ENVIRONMENT[%s]\n", env);
-
-  int is_live;
-
-  if(env == NULL) {
-    is_live = 0;  // env == NULL is also not 'live'
-  }
-
-  if(env != NULL) {
-    if (strcmp(env, "live") == 0) {
-      is_live = 1;
-    }
-
-    if (strcmp(env, "live") != 0) {
-      is_live = 0;
-    }
-  }
-  printf("is_live[%d]\n", is_live);
-
-  if (!is_live) {
+  if (!remote_error_monitor_is_live_environment()) {
     printf("Calling default PHP error handler...\n");
     /* Calling saved callback function for error handling */
     old_error_cb(type, error_filename, error_lineno, args);
   }
 }
 
+static bool remote_error_monitor_is_live_environment()
+{
+  const char* env = getenv("PANTHEON_ENVIRONMENT");
+  if (!env) {
+    return false;
+  }
+  return !strcmp(env, "live");
+}
 
 static void remote_error_monitor_exception_handler(zend_object *exception)
 {
