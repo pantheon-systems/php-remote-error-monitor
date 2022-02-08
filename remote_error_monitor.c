@@ -164,10 +164,14 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
 
   if(env == NULL) {
     is_live = 0;  // env == NULL is also not 'live'
-  } else {
+  }
+
+  if(env != NULL) {
     if (strcmp(env, "live") == 0) {
       is_live = 1;
-    } else {
+    }
+
+    if (strcmp(env, "live") != 0) {
       is_live = 0;
     }
   }
