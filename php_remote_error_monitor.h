@@ -34,7 +34,7 @@
    *
    */
   #define PHP_REMOTE_ERROR_MONITOR_EXTNAME "remote_error_monitor"
-  #define PHP_REMOTE_ERROR_MONITOR_VERSION "1.0.1-envaware1"
+  #define PHP_REMOTE_ERROR_MONITOR_VERSION "1.0.2"
 
   /* Define the entry point symbol.
    *
