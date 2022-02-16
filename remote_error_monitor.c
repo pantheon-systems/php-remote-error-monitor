@@ -159,15 +159,8 @@ static void remote_error_monitor_error_callback(int type, const char *error_file
   smart_str_0(&trace_str);
   remote_error_monitor_process(REMOTE_ERROR_MONITOR_ERROR, error_filename, error_lineno, args, trace_str.s ? ZSTR_VAL(trace_str.s) : "");
 
-  // Gentle roll-out: first, do not call the old error handler at all in the live environment.
-  // Once we are ready to enable this on dev / multidev environments, we can change
-  // this check to only call through to the old_error_cb on the live environment
-  // if it was deployed AFTER a given date (and always call through on dev/multidev).
-  // That way folks can preview on dev and only get the updated behavior on live after they deploy.
-  if (!remote_error_monitor_is_live_environment()) {
-    /* Calling saved callback function for error handling */
-    old_error_cb(type, error_filename, error_lineno, args);
-  }
+  /* Calling saved callback function for error handling */
+  old_error_cb(type, error_filename, error_lineno, args);
 }
 
 static void remote_error_monitor_exception_handler(zend_object *exception)
