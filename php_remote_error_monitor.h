@@ -48,7 +48,13 @@
     #define PHP_REMOTE_ERROR_MONITOR_API
   #endif
 
-  #define REMOTE_ERROR_MONITOR_E_ALL (E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING | E_STRICT)
+  /* Saving this specification, as we may want to return to it when our
+   * error reporting mechanism isn't causing platform stability issues.
+
+    #define REMOTE_ERROR_MONITOR_E_ALL (E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING | E_STRICT)
+   */
+
+  #define REMOTE_ERROR_MONITOR_E_ALL (E_ERROR & E_PARSE & E_CORE_ERROR & E_COMPILE_ERROR & E_USER_ERROR)
 
   #define REMOTE_ERROR_MONITOR_ERROR 1
   #define REMOTE_ERROR_MONITOR_EXCEPTION 2
