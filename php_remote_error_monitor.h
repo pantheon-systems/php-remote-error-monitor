@@ -48,6 +48,7 @@
     #define PHP_REMOTE_ERROR_MONITOR_API
   #endif
 
+  // Only send fatal types to the dashboard
   #define REMOTE_ERROR_MONITOR_E_ALL (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)
 
   #define REMOTE_ERROR_MONITOR_ERROR 1
