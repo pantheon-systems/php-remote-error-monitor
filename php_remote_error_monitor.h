@@ -34,7 +34,7 @@
    *
    */
   #define PHP_REMOTE_ERROR_MONITOR_EXTNAME "remote_error_monitor"
-  #define PHP_REMOTE_ERROR_MONITOR_VERSION "1.0.4"
+  #define PHP_REMOTE_ERROR_MONITOR_VERSION "1.0.5"
 
   /* Define the entry point symbol.
    *
@@ -48,7 +48,8 @@
     #define PHP_REMOTE_ERROR_MONITOR_API
   #endif
 
-  #define REMOTE_ERROR_MONITOR_E_ALL (E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING | E_STRICT)
+  // Only send fatal types to the dashboard
+  #define REMOTE_ERROR_MONITOR_E_ALL (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)
 
   #define REMOTE_ERROR_MONITOR_ERROR 1
   #define REMOTE_ERROR_MONITOR_EXCEPTION 2
